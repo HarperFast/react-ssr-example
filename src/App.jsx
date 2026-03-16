@@ -23,7 +23,7 @@ function CommentInput({ addComment }) {
 	);
 }
 
-export default function Post({ initialPostData }) {
+export default function Post({ initialPostData, cached }) {
 	const [post, setPost] = useState(initialPostData);
 
 	useEffect(() => {
@@ -84,6 +84,9 @@ export default function Post({ initialPostData }) {
 
 	return (
 		<article>
+			<span className={`cache-pill ${cached ? 'cached' : 'uncached'}`}>
+				{cached ? 'Cached' : 'Uncached'}
+			</span>
 			<h1>{post.title}</h1>
 			<p>{post.body}</p>
 			{post.comments && post.comments.length > 0 ? (
