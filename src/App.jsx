@@ -42,7 +42,7 @@ export default function Post({ initialPostData }) {
 		const newPost = { ...post, comments: [...post.comments, comment] };
 
 		fetch(`http://localhost:9926/Post/${post.id}`, {
-			method: 'PATCH',
+			method: 'PUT',
 			headers: {
 				'Content-Type': 'application/json',
 			},
@@ -64,7 +64,7 @@ export default function Post({ initialPostData }) {
 		const newPost = { ...post, comments: post.comments.filter((_, i) => i !== index) };
 
 		fetch(`http://localhost:9926/Post/${post.id}`, {
-			method: 'PATCH',
+			method: 'PUT',
 			headers: {
 				'Content-Type': 'application/json',
 			},

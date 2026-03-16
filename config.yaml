@@ -5,4 +5,4 @@ graphqlSchema:
 jsResource:
   files: resources.js
 static:
-  files: 'dist/'
+  files: 'dist/**/*'

@@ -9,14 +9,14 @@
 		"format": "prettier --write ."
 	},
 	"dependencies": {
-		"@vitejs/plugin-react": "^4.3.2",
-		"react": "^18.3.1",
-		"react-dom": "^18.3.1",
-		"vite": "^5.4.9"
+		"@vitejs/plugin-react": "6.0.1",
+		"react": "19.2.4",
+		"react-dom": "19.2.4",
+		"vite": "8.0.0"
 	},
 	"devDependencies": {
-		"@harperdb/code-guidelines": "^0.0.1",
-		"prettier": "^3.3.3"
+		"@harperdb/code-guidelines": "0.0.6",
+		"prettier": "3.8.1"
 	},
 	"prettier": "@harperdb/code-guidelines/prettier",
 	"license": "Apache-2.0"
