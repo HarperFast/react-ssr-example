@@ -1,4 +1,4 @@
-# HarperDB React SSR Example
+# Harper React SSR Example
 
 This repo is an example of how to implement React SSR using HarperDB Resources to efficiently generate a _Blog_ from a database of _Posts_.
 
@@ -11,7 +11,7 @@ It includes complete client side hydration as well, resulting in a fully interac
 
 1. `npm i`
 2. `npm build`
-3. `harperdb run .`
+3. `harper run .`
 4. Navigate to [/UncachedBlog/0](http://localhost:9926/UncachedBlog/0) or [/CachedBlog/0](http://localhost:9926/CachedBlog/0)
 5. Add or remove comments!
 

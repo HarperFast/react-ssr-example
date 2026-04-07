@@ -5,6 +5,6 @@ import App from './App.jsx';
 hydrateRoot(
 	document.getElementById('root'),
 	<StrictMode>
-		<App initialPostData={window.__INITIAL_POST_DATA__} />
+		<App initialPostData={window.__INITIAL_POST_DATA__} cached={window.__CACHED__} />
 	</StrictMode>
 );
