@@ -10,6 +10,7 @@
 	},
 	"dependencies": {
 		"@vitejs/plugin-react": "6.0.1",
+		"harper": "^5.0.10",
 		"react": "19.2.4",
 		"react-dom": "19.2.4",
 		"vite": "8.0.0"

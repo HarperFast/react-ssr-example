@@ -1,3 +1,4 @@
+import { tables, logger } from 'harper';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -13,31 +14,34 @@ if (!(await tables.Post.get('0'))) {
 const template = fs.readFileSync(path.join(import.meta.dirname, 'dist/client/index.html'), 'utf-8');
 const serverEntry = await import('./dist/server/entry-server.js');
 
-async function renderPost(post, cached = false) {
+function renderPost(post, cached) {
 	const rendered = serverEntry.render({ initialPostData: post, cached });
 
-	const html = template
+	return template
 		.replace(`<!--app-head-->`, rendered.head ?? '')
 		.replace(`<!--app-html-->`, rendered.html ?? '')
-		.replace(`<!--app-data-->`, `<script>window.__INITIAL_POST_DATA__ = ${JSON.stringify(post)}; window.__CACHED__ = ${cached}</script>`);
-
-	return html;
+		.replace(
+			`<!--app-data-->`,
+			`<script>window.__INITIAL_POST_DATA__ = ${JSON.stringify(post)}; window.__CACHED__ = ${cached}</script>`
+		);
 }
 
 export class UncachedBlog extends tables.Post {
-	async get() {
+	static async get(target) {
+		const post = await tables.Post.get(target);
 		return {
 			status: 200,
 			headers: { 'Content-Type': 'text/html' },
-			body: await renderPost(this, false),
+			body: renderPost(post, false),
 		};
 	}
 }
 
 class PageBuilder extends tables.Post {
-	async get() {
+	static async get(target) {
+		const post = await tables.Post.get(target);
 		return {
-			content: await renderPost(this, true),
+			content: renderPost(post, true),
 		};
 	}
 }
@@ -45,10 +49,11 @@ class PageBuilder extends tables.Post {
 tables.BlogCache.sourcedFrom(PageBuilder);
 
 export class CachedBlog extends tables.BlogCache {
-	async get() {
+	static async get(target) {
+		const cached = await tables.BlogCache.get(target);
 		return {
 			contentType: 'text/html',
-			data: this.content,
+			data: cached.content,
 		};
 	}
 }

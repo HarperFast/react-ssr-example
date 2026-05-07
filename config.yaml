@@ -1,5 +1,4 @@
-rest:
-  lastModified: true
+rest: true
 graphqlSchema:
   files: schema.graphql
 jsResource:
