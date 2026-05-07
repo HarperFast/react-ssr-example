@@ -1,6 +1,7 @@
 import { tables, logger } from 'harper';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 if (!(await tables.Post.get('0'))) {
 	await tables.Post.put({
@@ -11,7 +12,7 @@ if (!(await tables.Post.get('0'))) {
 	});
 }
 
-const template = fs.readFileSync(path.join(import.meta.dirname, 'dist/client/index.html'), 'utf-8');
+const template = fs.readFileSync(path.join(fileURLToPath(import.meta.url), '../dist/client/index.html'), 'utf-8');
 const serverEntry = await import('./dist/server/entry-server.js');
 
 function renderPost(post, cached) {
