@@ -67,6 +67,28 @@ async function fetchSettledCachedBlog(
 	);
 }
 
+// Issue a conditional request and poll until it returns 304. The cache can
+// briefly re-revalidate after settling (so the freshly captured ETag may not
+// match for a moment); retry until the conditional request is honored.
+async function expectConditional304(
+	ctx: ContextWithHarper,
+	etag: string,
+	lastModified: string,
+	attempts = 30
+): Promise<void> {
+	let lastStatus = 0;
+	for (let i = 0; i < attempts; i++) {
+		const res = await authFetch(ctx, '/CachedBlog/0', {
+			headers: { 'If-None-Match': etag, 'If-Modified-Since': lastModified },
+		});
+		await res.arrayBuffer();
+		lastStatus = res.status;
+		if (res.status === 304) return;
+		await delay(100);
+	}
+	throw new Error(`expected a 304 cache hit with the given headers; last status=${lastStatus}`);
+}
+
 void suite('React SSR + caching example', (ctx: ContextWithHarper) => {
 	before(async () => {
 		// The fixture (repo root) is built (vite) by the test script before this runs,
@@ -141,10 +163,7 @@ void suite('React SSR + caching example', (ctx: ContextWithHarper) => {
 		ok(etag, 'expected an ETag header on the cached response');
 		ok(lastModified, 'expected a Last-Modified header (rest.lastModified) on the cached response');
 
-		const r2 = await authFetch(ctx, '/CachedBlog/0', {
-			headers: { 'If-None-Match': etag, 'If-Modified-Since': lastModified },
-		});
-		strictEqual(r2.status, 304);
+		await expectConditional304(ctx, etag, lastModified);
 	});
 
 	void test('Updating the Post invalidates the cache, then re-caches', async () => {
@@ -152,10 +171,7 @@ void suite('React SSR + caching example', (ctx: ContextWithHarper) => {
 		const before = await fetchSettledCachedBlog(ctx);
 
 		// A conditional request with the settled headers should hit the cache (304).
-		const hit = await authFetch(ctx, '/CachedBlog/0', {
-			headers: { 'If-None-Match': before.etag, 'If-Modified-Since': before.lastModified },
-		});
-		strictEqual(hit.status, 304, 'expected a cache hit before invalidation');
+		await expectConditional304(ctx, before.etag, before.lastModified);
 
 		// Update the source Post, which invalidates the BlogCache entry.
 		const post = (await (await authFetch(ctx, '/Post/0')).json()) as { comments: string[] };
@@ -166,21 +182,19 @@ void suite('React SSR + caching example', (ctx: ContextWithHarper) => {
 		});
 		ok(patch.ok, `expected successful PATCH, got HTTP ${patch.status}`);
 
-		// After invalidation + re-cache, the cache settles on a new ETag (the
-		// content changed because the Post's comments changed).
-		const after = await fetchSettledCachedBlog(ctx);
-		ok(after.etag !== before.etag, 'expected a new ETag after the source Post changed');
-
-		// A conditional request with the stale (pre-update) headers must miss (200).
+		// A conditional request with the stale (pre-update) headers must miss (200):
+		// the content changed because the Post's comments changed, so the ETag no
+		// longer matches.
 		const miss = await authFetch(ctx, '/CachedBlog/0', {
 			headers: { 'If-None-Match': before.etag, 'If-Modified-Since': before.lastModified },
 		});
+		await miss.arrayBuffer();
 		strictEqual(miss.status, 200, 'expected a cache miss with stale headers after invalidation');
 
-		// A conditional request with the refreshed headers should hit again (304).
-		const rehit = await authFetch(ctx, '/CachedBlog/0', {
-			headers: { 'If-None-Match': after.etag, 'If-Modified-Since': after.lastModified },
-		});
-		strictEqual(rehit.status, 304, 'expected a cache hit with refreshed headers');
+		// Once the cache re-settles on a new ETag, a conditional request with the
+		// refreshed headers should hit again (304).
+		const after = await fetchSettledCachedBlog(ctx);
+		ok(after.etag !== before.etag, 'expected a new ETag after the source Post changed');
+		await expectConditional304(ctx, after.etag, after.lastModified);
 	});
 });
