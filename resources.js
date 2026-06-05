@@ -1,4 +1,4 @@
-import { tables, logger } from 'harper';
+import { tables } from 'harper';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,8 +28,8 @@ function renderPost(post, cached) {
 }
 
 export class UncachedBlog extends tables.Post {
-	static async get(target) {
-		const post = await tables.Post.get(target);
+	async get(query) {
+		const post = await super.get(query);
 		return {
 			status: 200,
 			headers: { 'Content-Type': 'text/html' },
@@ -38,15 +38,14 @@ export class UncachedBlog extends tables.Post {
 	}
 }
 
+// Caching source for BlogCache. In v5 a caching source resolves per-id through
+// an instance `get`, so the cache instantiates this resource for the requested
+// id and calls `get()`; `super.get()` returns the underlying Post record.
 class PageBuilder extends tables.Post {
-	static async get(target) {
-		const post = await tables.Post.get(target);
-		const content = renderPost(post, true);
-		logger.notify(
-			`[diag] PageBuilder.get target=${JSON.stringify(target)} postId=${post?.id} contentLen=${content?.length}`
-		);
+	async get(query) {
+		const post = await super.get(query);
 		return {
-			content,
+			content: renderPost(post, true),
 		};
 	}
 }
@@ -54,11 +53,8 @@ class PageBuilder extends tables.Post {
 tables.BlogCache.sourcedFrom(PageBuilder);
 
 export class CachedBlog extends tables.BlogCache {
-	static async get(target) {
-		const cached = await tables.BlogCache.get(target);
-		logger.notify(
-			`[diag] CachedBlog.get cachedKeys=${cached ? JSON.stringify(Object.keys(cached)) : 'null'} contentLen=${cached?.content?.length}`
-		);
+	async get(query) {
+		const cached = await super.get(query);
 		return {
 			contentType: 'text/html',
 			data: cached.content,
