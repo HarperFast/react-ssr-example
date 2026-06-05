@@ -1,4 +1,4 @@
-import { tables } from 'harper';
+import { tables, logger } from 'harper';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,8 +41,12 @@ export class UncachedBlog extends tables.Post {
 class PageBuilder extends tables.Post {
 	static async get(target) {
 		const post = await tables.Post.get(target);
+		const content = renderPost(post, true);
+		logger.notify(
+			`[diag] PageBuilder.get target=${JSON.stringify(target)} postId=${post?.id} contentLen=${content?.length}`
+		);
 		return {
-			content: renderPost(post, true),
+			content,
 		};
 	}
 }
@@ -52,6 +56,9 @@ tables.BlogCache.sourcedFrom(PageBuilder);
 export class CachedBlog extends tables.BlogCache {
 	static async get(target) {
 		const cached = await tables.BlogCache.get(target);
+		logger.notify(
+			`[diag] CachedBlog.get cachedKeys=${cached ? JSON.stringify(Object.keys(cached)) : 'null'} contentLen=${cached?.content?.length}`
+		);
 		return {
 			contentType: 'text/html',
 			data: cached.content,
