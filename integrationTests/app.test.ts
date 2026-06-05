@@ -45,7 +45,9 @@ async function fetchSettledCachedBlog(
 		const lastModified = res.headers.get('Last-Modified');
 		const html = await res.text();
 		last = { etag, lastModified, html };
-		if (etag && etag === prevEtag) {
+		// Consider the cache settled only once it serves a full HTML document
+		// with a stable ETag across two consecutive reads.
+		if (etag && etag === prevEtag && html.includes('<!doctype html>')) {
 			return { etag, lastModified: lastModified!, html };
 		}
 		prevEtag = etag;
@@ -115,11 +117,9 @@ void suite('React SSR + caching example', (ctx: ContextWithHarper) => {
 
 	void test('GET /CachedBlog/0 server-side renders HTML with cached flag', async () => {
 		const res = await authFetch(ctx, '/CachedBlog/0');
-		const html = await res.text();
-		// Diagnostic: surface the actual served body so CI logs reveal its shape.
-		console.log(
-			`[diag] CachedBlog status=${res.status} ct=${res.headers.get('Content-Type')} len=${html.length} head=${JSON.stringify(html.slice(0, 120))}`
-		);
+		strictEqual(res.status, 200);
+		strictEqual(res.headers.get('Content-Type'), 'text/html');
+		const { html } = await fetchSettledCachedBlog(ctx);
 		ok(html.includes('<!doctype html>'), 'expected full HTML document');
 		ok(html.includes('window.__CACHED__ = true'), 'expected cached flag in SSR output');
 		ok(html.includes('Hello, World!'), 'expected post title in rendered HTML');
