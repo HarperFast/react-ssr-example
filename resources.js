@@ -53,9 +53,8 @@ export class CachedBlog extends tables.BlogCache {
 	static async get(target) {
 		const cached = await tables.BlogCache.get(target);
 		return {
-			status: 200,
-			headers: { 'Content-Type': 'text/html' },
-			body: cached.content,
+			contentType: 'text/html',
+			data: cached.content,
 		};
 	}
 }

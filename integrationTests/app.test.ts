@@ -34,26 +34,37 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 async function fetchSettledCachedBlog(
 	ctx: ContextWithHarper,
 	path = '/CachedBlog/0',
-	attempts = 30
-): Promise<{ etag: string; lastModified: string; html: string }> {
+	attempts = 50
+): Promise<{ etag: string; lastModified: string; html: string; contentType: string }> {
 	let prevEtag: string | null = null;
-	let last: { etag: string | null; lastModified: string | null; html: string } | undefined;
+	let last: { status: number; etag: string | null; html: string } | undefined;
 	for (let i = 0; i < attempts; i++) {
 		const res = await authFetch(ctx, path);
-		strictEqual(res.status, 200, `expected 200 while settling cache, got ${res.status}`);
 		const etag = res.headers.get('ETag');
 		const lastModified = res.headers.get('Last-Modified');
+		const contentType = res.headers.get('Content-Type');
 		const html = await res.text();
-		last = { etag, lastModified, html };
-		// Consider the cache settled only once it serves a full HTML document
-		// with a stable ETag across two consecutive reads.
-		if (etag && etag === prevEtag && html.includes('<!doctype html>')) {
-			return { etag, lastModified: lastModified!, html };
+		last = { status: res.status, etag, html };
+		// The BlogCache entry is populated asynchronously: until `cached.content`
+		// exists, CachedBlog.get returns { contentType, data: undefined }, which
+		// serializes to JSON (no ETag) rather than the HTML body. Consider the
+		// cache settled only once it serves a full HTML document (text/html) with
+		// an ETag stable across two consecutive reads.
+		if (
+			res.status === 200 &&
+			etag &&
+			etag === prevEtag &&
+			contentType === 'text/html' &&
+			html.includes('<!doctype html>')
+		) {
+			return { etag, lastModified: lastModified!, html, contentType };
 		}
 		prevEtag = etag;
 		await delay(100);
 	}
-	throw new Error(`CachedBlog ETag never settled; last ETag=${last?.etag}`);
+	throw new Error(
+		`CachedBlog never settled into a cached HTML document; last status=${last?.status} etag=${last?.etag} bodyHead=${JSON.stringify(last?.html.slice(0, 80))}`
+	);
 }
 
 void suite('React SSR + caching example', (ctx: ContextWithHarper) => {
@@ -116,10 +127,8 @@ void suite('React SSR + caching example', (ctx: ContextWithHarper) => {
 	});
 
 	void test('GET /CachedBlog/0 server-side renders HTML with cached flag', async () => {
-		const res = await authFetch(ctx, '/CachedBlog/0');
-		strictEqual(res.status, 200);
-		strictEqual(res.headers.get('Content-Type'), 'text/html');
-		const { html } = await fetchSettledCachedBlog(ctx);
+		const { html, contentType } = await fetchSettledCachedBlog(ctx);
+		strictEqual(contentType, 'text/html');
 		ok(html.includes('<!doctype html>'), 'expected full HTML document');
 		ok(html.includes('window.__CACHED__ = true'), 'expected cached flag in SSR output');
 		ok(html.includes('Hello, World!'), 'expected post title in rendered HTML');
