@@ -23,7 +23,7 @@ function renderPost(post, cached) {
 		.replace(`<!--app-html-->`, rendered.html ?? '')
 		.replace(
 			`<!--app-data-->`,
-			`<script>window.__INITIAL_POST_DATA__ = ${JSON.stringify(post)}; window.__CACHED__ = ${cached}</script>`
+			`<script>window.__INITIAL_POST_DATA__ = ${((v) => JSON.stringify(v).replace(/</g, '\\u003c'))(post)}; window.__CACHED__ = ${cached}</script>`
 		);
 }
 
@@ -57,7 +57,7 @@ export class CachedBlog extends tables.BlogCache {
 		const cached = await super.get(query);
 		return {
 			contentType: 'text/html',
-			data: cached.content,
+			data: cached?.content,
 		};
 	}
 }

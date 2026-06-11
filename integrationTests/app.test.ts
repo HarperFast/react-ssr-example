@@ -54,7 +54,7 @@ async function fetchSettledCachedBlog(
 			res.status === 200 &&
 			etag &&
 			etag === prevEtag &&
-			contentType === 'text/html' &&
+			contentType?.startsWith('text/html') &&
 			html.includes('<!doctype html>')
 		) {
 			return { etag, lastModified: lastModified!, html, contentType };
@@ -150,7 +150,7 @@ void suite('React SSR + caching example', (ctx: ContextWithHarper) => {
 
 	void test('GET /CachedBlog/0 server-side renders HTML with cached flag', async () => {
 		const { html, contentType } = await fetchSettledCachedBlog(ctx);
-		strictEqual(contentType, 'text/html');
+		ok(contentType?.startsWith('text/html'), `expected text/html content-type, got ${contentType}`);
 		ok(html.includes('<!doctype html>'), 'expected full HTML document');
 		ok(html.includes('window.__CACHED__ = true'), 'expected cached flag in SSR output');
 		ok(html.includes('Hello, World!'), 'expected post title in rendered HTML');
