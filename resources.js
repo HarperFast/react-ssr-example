@@ -15,6 +15,11 @@ if (!(await tables.Post.get('0'))) {
 const template = fs.readFileSync(path.join(fileURLToPath(import.meta.url), '../dist/client/index.html'), 'utf-8');
 const serverEntry = await import('./dist/server/entry-server.js');
 
+// JSON.stringify does not escape `<`, so a post whose title/body/comments contains the
+// literal `</script>` would close the inline script tag and allow HTML/JS injection.
+// Escaping `<` as \u003c keeps the value a valid JSON string while making that impossible.
+const safeJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
+
 function renderPost(post, cached) {
 	const rendered = serverEntry.render({ initialPostData: post, cached });
 
@@ -23,7 +28,7 @@ function renderPost(post, cached) {
 		.replace(`<!--app-html-->`, rendered.html ?? '')
 		.replace(
 			`<!--app-data-->`,
-			`<script>window.__INITIAL_POST_DATA__ = ${((v) => JSON.stringify(v).replace(/</g, '\\u003c'))(post)}; window.__CACHED__ = ${cached}</script>`
+			`<script>window.__INITIAL_POST_DATA__ = ${safeJson(post)}; window.__CACHED__ = ${cached}</script>`
 		);
 }
 

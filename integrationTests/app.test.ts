@@ -26,6 +26,14 @@ function authFetch(
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Compare only the media type of a Content-Type header. HTTP servers commonly append
+// parameters such as `; charset=utf-8`, and a strict equality against 'text/html' would
+// turn that into a spurious failure (or, in the settlement loop below, a timeout that
+// reports "never settled" instead of the real reason).
+function mediaType(contentType: string | null): string | undefined {
+	return contentType?.split(';')[0].trim().toLowerCase();
+}
+
 // The BlogCache table is sourced from PageBuilder and populated asynchronously;
 // after a source (Post) change the cache entry is rebuilt in the background, so
 // the ETag/Last-Modified can change across the first few reads. Poll a full
@@ -54,7 +62,7 @@ async function fetchSettledCachedBlog(
 			res.status === 200 &&
 			etag &&
 			etag === prevEtag &&
-			contentType?.startsWith('text/html') &&
+			mediaType(contentType) === 'text/html' &&
 			html.includes('<!doctype html>')
 		) {
 			return { etag, lastModified: lastModified!, html, contentType };
@@ -136,7 +144,7 @@ void suite('React SSR + caching example', (ctx: ContextWithHarper) => {
 	void test('GET /UncachedBlog/0 server-side renders HTML', async () => {
 		const res = await authFetch(ctx, '/UncachedBlog/0');
 		strictEqual(res.status, 200);
-		strictEqual(res.headers.get('Content-Type'), 'text/html');
+		strictEqual(mediaType(res.headers.get('Content-Type')), 'text/html');
 		const html = await res.text();
 		ok(html.includes('<!doctype html>'), 'expected full HTML document');
 		// The app head/html placeholders should have been replaced by the SSR render.
@@ -150,7 +158,7 @@ void suite('React SSR + caching example', (ctx: ContextWithHarper) => {
 
 	void test('GET /CachedBlog/0 server-side renders HTML with cached flag', async () => {
 		const { html, contentType } = await fetchSettledCachedBlog(ctx);
-		ok(contentType?.startsWith('text/html'), `expected text/html content-type, got ${contentType}`);
+		strictEqual(mediaType(contentType), 'text/html', `expected text/html content-type, got ${contentType}`);
 		ok(html.includes('<!doctype html>'), 'expected full HTML document');
 		ok(html.includes('window.__CACHED__ = true'), 'expected cached flag in SSR output');
 		ok(html.includes('Hello, World!'), 'expected post title in rendered HTML');
