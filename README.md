@@ -1,6 +1,6 @@
 # Harper React SSR Example
 
-This repo is an example of how to implement React SSR using HarperDB Resources to efficiently generate a _Blog_ from a database of _Posts_.
+This repo is an example of how to implement React SSR using Harper Resources to efficiently generate a _Blog_ from a database of _Posts_.
 
 It includes complete client side hydration as well, resulting in a fully interactive React app experience.
 
@@ -35,4 +35,4 @@ curl -X PATCH http://localhost:9926/Post/0 \
 -d '{ "comments": [] }'
 ```
 
-- This repo includes a `caching-test.js` script for quickly demonstrating and validating the caching behavior. Give it a try with `node caching-test.js` (component must be running with HarperDB).
+- This repo includes a `caching-test.js` script for quickly demonstrating and validating the caching behavior. Give it a try with `node caching-test.js` (component must be running with Harper).
